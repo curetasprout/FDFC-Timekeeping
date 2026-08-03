@@ -1,6 +1,5 @@
 const $ = (id) => document.getElementById(id);
 const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.className = cls; return e; };
-const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 const STATE = {
   attFileName: null, detailed: null, summaryValues: null, attError: null,
@@ -58,21 +57,55 @@ function currentPlan() {
   return buildPlan(STATE.detailed, STATE.mapping || new Map());
 }
 
-function renderFileStatus(prefix, fileName, error, okText) {
+function clearAttFile() {
+  STATE.attFileName = null;
+  STATE.detailed = null;
+  STATE.summaryValues = null;
+  STATE.attError = null;
+  renderAll();
+}
+
+function clearEmpFile() {
+  STATE.empFileName = null;
+  STATE.mapping = null;
+  STATE.empError = null;
+  renderAll();
+}
+
+function renderFileStatus(prefix, fileName, error, okText, onRemove) {
   const box = $(prefix + 'Status');
-  if (!fileName) { box.innerHTML = ''; return; }
-  if (error) {
-    box.innerHTML = `<div class="fileitem" style="border-color:var(--sev-error)"><span>${esc(fileName)}</span><span class="meta" style="color:var(--sev-error)">${esc(error)}</span></div>`;
-  } else {
-    box.innerHTML = `<div class="fileitem"><span>${esc(fileName)}</span><span class="meta">${esc(okText)}</span></div>`;
-  }
+  box.innerHTML = '';
+  if (!fileName) return;
+
+  const item = el('div', 'fileitem');
+  if (error) item.style.borderColor = 'var(--sev-error)';
+
+  const name = el('span'); name.textContent = fileName;
+  item.appendChild(name);
+
+  const meta = el('span', 'meta');
+  meta.textContent = error || okText;
+  if (error) meta.style.color = 'var(--sev-error)';
+  item.appendChild(meta);
+
+  const rm = el('button', 'rm');
+  rm.type = 'button';
+  rm.title = 'Remove file';
+  rm.setAttribute('aria-label', 'Remove file');
+  rm.textContent = '✕';
+  rm.onclick = onRemove;
+  item.appendChild(rm);
+
+  box.appendChild(item);
 }
 
 function renderAll() {
   renderFileStatus('att', STATE.attFileName, STATE.attError,
-    STATE.detailed ? `${new Set(STATE.detailed.rows.map((r) => r.idNumber)).size} employees, ${STATE.detailed.rows.length} day-rows` : '');
+    STATE.detailed ? `${new Set(STATE.detailed.rows.map((r) => r.idNumber)).size} employees, ${STATE.detailed.rows.length} day-rows` : '',
+    clearAttFile);
   renderFileStatus('emp', STATE.empFileName, STATE.empError,
-    STATE.mapping ? `${STATE.mapping.size} Biometric ID mappings` : '');
+    STATE.mapping ? `${STATE.mapping.size} Biometric ID mappings` : '',
+    clearEmpFile);
   renderValidation();
   $('btnExportFlat').disabled = !STATE.detailed;
   $('btnExportBiologs').disabled = !(STATE.detailed && STATE.mapping);
