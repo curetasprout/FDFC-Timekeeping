@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HRIS Biologs Generator</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --green: #00A651; --green-d: #008043; --green-l: #f0faf5;
+    --ink: #1a202c; --muted: #718096; --faint: #a0aec0;
+    --line: #e2e8f0; --line-2: #cbd5e0; --bg: #f0f4f8; --card: #fff;
+    --pos: #15803d; --neg: #b91c1c;
+    --sev-error: #e11d48; --sev-warn: #f59e0b; --sev-info: #2563eb;
+  }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg); color: var(--ink); min-height: 100vh; font-size: 14px; }
+  header { background: var(--green); color: #fff; padding: 18px 32px; }
+  header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: -0.5px; }
+  header p { font-size: 0.82rem; opacity: 0.9; margin-top: 2px; }
+  .container { max-width: 860px; margin: 28px auto; padding: 0 20px 80px; }
+  .card { background: var(--card); border-radius: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 4px 14px rgba(0,0,0,.04);
+    padding: 22px 26px; margin-bottom: 18px; }
+  .step { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .badge { width: 24px; height: 24px; background: var(--green); color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 0.74rem; font-weight: 700; flex-shrink: 0; }
+  .step h2 { font-size: 1rem; font-weight: 700; color: #2d3748; }
+  .desc { font-size: 0.82rem; color: var(--muted); margin: 0 0 16px 34px; }
+  .drop { border: 2px dashed var(--line-2); border-radius: 10px; padding: 28px; text-align: center;
+    cursor: pointer; transition: .15s; background: #f7fafc; }
+  .drop:hover, .drop.over { border-color: var(--green); background: var(--green-l); }
+  .drop .t { font-weight: 600; color: #4a5568; }
+  .drop .s { font-size: 0.8rem; color: var(--faint); margin-top: 4px; }
+  .filelist { margin-top: 14px; }
+  .fileitem { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #f7fafc;
+    border: 1px solid var(--line); border-radius: 8px; font-size: 0.85rem; }
+  .fileitem .meta { color: var(--muted); font-size: 0.78rem; margin-left: auto; }
+  .btn { font-size: 0.85rem; padding: 10px 18px; border-radius: 8px; border: 1px solid var(--green);
+    background: var(--green); color: #fff; cursor: pointer; font-weight: 600; }
+  .btn:hover { background: var(--green-d); }
+  .btn.ghost { background: #fff; color: var(--green); }
+  .btn.ghost:hover { background: var(--green-l); }
+  .btn:disabled { opacity: .45; cursor: not-allowed; }
+  .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px; font-size: 0.78rem; color: var(--muted); }
+  .legend .item { display: inline-flex; align-items: center; gap: 6px; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+  .legend .dot.error { background: var(--sev-error); } .legend .dot.warn { background: var(--sev-warn); }
+  .legend .dot.info { background: var(--sev-info); } .legend .dot.ok { background: var(--green); }
+  .val-summary { font-size: 0.88rem; margin-bottom: 12px; }
+  .val-ok { color: var(--green); font-weight: 600; }
+  .issue { border: 1px solid var(--line); border-radius: 8px; margin-bottom: 8px; }
+  .issue > summary { list-style: none; cursor: pointer; padding: 10px 14px; display: flex; align-items: center; gap: 10px; font-size: 0.85rem; }
+  .issue > summary::-webkit-details-marker { display: none; }
+  .issue.flat > summary { cursor: default; }
+  .issue .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .issue .dot.error { background: var(--sev-error); } .issue .dot.warn { background: var(--sev-warn); }
+  .issue .dot.info { background: var(--sev-info); } .issue .dot.ok { background: var(--green); }
+  .issue .chev { margin-left: auto; width: 0; height: 0; flex-shrink: 0;
+    border-left: 5px solid var(--faint); border-top: 4px solid transparent; border-bottom: 4px solid transparent;
+    transition: transform .15s; }
+  .issue[open] > summary .chev { transform: rotate(90deg); }
+  .issue[open] > summary { border-bottom: 1px solid var(--line); }
+  .issue .body { padding: 4px 14px 12px 34px; font-size: 0.8rem; color: var(--muted); line-height: 1.7; }
+  .issue .body .hint { color: var(--muted); margin-bottom: 10px; }
+  .vr { padding: 5px 0; border-bottom: 0.5px solid var(--line); font-family: ui-monospace, Menlo, Consolas, monospace;
+    font-size: 0.78rem; color: #4a5568; }
+  .vr:last-child { border-bottom: none; }
+  .empty { text-align: center; color: var(--faint); padding: 20px; font-size: 0.86rem; }
+  .exportrow { display: flex; gap: 12px; flex-wrap: wrap; }
+  .exportrow .col { flex: 1; min-width: 220px; }
+  .exportrow .col p { font-size: 0.8rem; color: var(--muted); margin-bottom: 10px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>HRIS Biologs Generator</h1>
+  <p>Attendance schedule &rarr; flat file &amp; HRIS biologs import. Runs entirely in your browser &mdash; nothing is uploaded.</p>
+</header>
+
+<div class="container">
+
+  <div class="card">
+    <div class="step"><span class="badge">1</span><h2>Upload Attendance Report</h2></div>
+    <p class="desc">The export with <strong>Summary</strong> + <strong>Detailed</strong> tabs.</p>
+    <div class="drop" id="dropAtt">
+      <div class="t">Drop the Attendance Report here, or click to browse</div>
+      <div class="s">.xlsx</div>
+    </div>
+    <input type="file" id="attFile" accept=".xlsx,.xls" style="display:none" />
+    <div class="filelist" id="attStatus"></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="badge">2</span><h2>Upload Employee List Report</h2></div>
+    <p class="desc">Maps <strong>Employee ID</strong> &rarr; <strong>Biometric ID</strong>. Only needed for the Biologs template export.</p>
+    <div class="drop" id="dropEmp">
+      <div class="t">Drop the Employee List Report here, or click to browse</div>
+      <div class="s">.xlsx</div>
+    </div>
+    <input type="file" id="empFile" accept=".xlsx,.xls" style="display:none" />
+    <div class="filelist" id="empStatus"></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="badge">3</span><h2>Validation</h2></div>
+    <p class="desc">Checks run automatically. Warnings don&rsquo;t block export &mdash; expand any item to see the details.</p>
+    <div class="legend">
+      <span class="item"><span class="dot error"></span> Error</span>
+      <span class="item"><span class="dot warn"></span> Warning</span>
+      <span class="item"><span class="dot info"></span> Info</span>
+      <span class="item"><span class="dot ok"></span> Passed</span>
+    </div>
+    <div class="val-summary" id="valSummary"></div>
+    <div id="valIssues"></div>
+  </div>
+
+  <div class="card">
+    <div class="step"><span class="badge">4</span><h2>Export</h2></div>
+    <div class="exportrow">
+      <div class="col">
+        <p>Detailed sheet flattened &mdash; Name &amp; ID Number added as columns A/B.</p>
+        <button class="btn" id="btnExportFlat" disabled>Export Flat File</button>
+      </div>
+      <div class="col">
+        <p>HRIS import file &mdash; one IN + one OUT row per scheduled working day.</p>
+        <button class="btn" id="btnExportBiologs" disabled>Export Biologs Template</button>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>/*__VENDOR__*/</script>
+<script>/*__CORE__*/</script>
+<script>/*__APP__*/</script>
+</body>
+</html>
