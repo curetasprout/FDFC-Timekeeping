@@ -118,7 +118,7 @@
     <div class="step"><span class="badge">4</span><h2>Export</h2></div>
     <div class="exportrow">
       <div class="col">
-        <p>Detailed sheet flattened &mdash; Name &amp; ID Number added as columns A/B.</p>
+        <p>Detailed sheet flattened &mdash; Name &amp; ID Number added as columns A/B. Summary sheet carried over as-is.</p>
         <button class="btn" id="btnExportFlat" disabled>Export Flat File</button>
       </div>
       <div class="col">
@@ -497,10 +497,27 @@ function buildPlan(detailed, mappingMap) {
 
 // Deliverable 1: the Detailed sheet flattened, with Name/ID Number prepended to
 // every row (a clean rebuild — values only, no attempt to mirror the source's
-// per-block layout/styling since the whole point is to de-nest it).
-function buildFlatFile(ExcelJS, plan) {
+// per-block layout/styling since the whole point is to de-nest it). The source
+// Summary sheet, if provided, is carried over as-is (raw values) so the flat
+// file stays self-contained/reconcilable with the original report.
+function buildFlatFile(ExcelJS, plan, summaryValues) {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'HRIS Biologs Generator';
+
+  if (summaryValues) {
+    const sOut = wb.addWorksheet('Summary');
+    for (let r = 1; r < summaryValues.length; r++) {
+      const row = summaryValues[r];
+      if (!row) continue;
+      for (let c = 1; c < row.length; c++) {
+        const v = row[c];
+        if (v !== undefined && v !== null) sOut.getRow(r).getCell(c).value = v;
+      }
+    }
+    sOut.getRow(1).eachCell((cell) => { cell.font = { name: 'Calibri', size: 11, bold: true }; });
+    sOut.views = [{ state: 'frozen', ySplit: 1 }];
+  }
+
   const ws = wb.addWorksheet('Detailed (Flat)');
 
   const headers = ['Name', 'ID Number', ...plan.flatHeaders];
@@ -568,7 +585,7 @@ const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.cla
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 const STATE = {
-  attFileName: null, detailed: null, attError: null,
+  attFileName: null, detailed: null, summaryValues: null, attError: null,
   empFileName: null, mapping: null, empError: null,
 };
 
@@ -588,11 +605,14 @@ async function handleAttFile(files) {
   STATE.attFileName = file.name;
   STATE.attError = null;
   STATE.detailed = null;
+  STATE.summaryValues = null;
   try {
     const wb = await loadWorkbook(file);
     const ws = wb.getWorksheet('Detailed');
     if (!ws) throw new Error('This file does not look like an Attendance export — it must contain a "Detailed" tab.');
     STATE.detailed = parseDetailed(ws.getSheetValues());
+    const summaryWs = wb.getWorksheet('Summary');
+    if (summaryWs) STATE.summaryValues = summaryWs.getSheetValues();
   } catch (e) {
     STATE.attError = e.message;
   }
@@ -656,6 +676,9 @@ function renderValidation() {
       });
     }
   }
+  if (!STATE.summaryValues) {
+    rules.push({ sev: 'info', title: 'No "Summary" sheet found in the Attendance Report — the flat file export will not include a Summary tab.' });
+  }
 
   const nErr = rules.filter((r) => r.sev === 'error').length;
   const nWarn = rules.filter((r) => r.sev === 'warn').length;
@@ -707,7 +730,7 @@ async function exportFlat() {
   const btn = $('btnExportFlat'); const label = btn.textContent;
   try {
     btn.disabled = true; btn.textContent = 'Exporting…';
-    const wb = buildFlatFile(ExcelJS, currentPlan());
+    const wb = buildFlatFile(ExcelJS, currentPlan(), STATE.summaryValues);
     await downloadWorkbook(wb, 'Attendance_Flat.xlsx');
   } catch (e) {
     alert('Export failed: ' + e.message);

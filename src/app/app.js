@@ -3,7 +3,7 @@ const el = (tag, cls) => { const e = document.createElement(tag); if (cls) e.cla
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
 
 const STATE = {
-  attFileName: null, detailed: null, attError: null,
+  attFileName: null, detailed: null, summaryValues: null, attError: null,
   empFileName: null, mapping: null, empError: null,
 };
 
@@ -23,11 +23,14 @@ async function handleAttFile(files) {
   STATE.attFileName = file.name;
   STATE.attError = null;
   STATE.detailed = null;
+  STATE.summaryValues = null;
   try {
     const wb = await loadWorkbook(file);
     const ws = wb.getWorksheet('Detailed');
     if (!ws) throw new Error('This file does not look like an Attendance export — it must contain a "Detailed" tab.');
     STATE.detailed = parseDetailed(ws.getSheetValues());
+    const summaryWs = wb.getWorksheet('Summary');
+    if (summaryWs) STATE.summaryValues = summaryWs.getSheetValues();
   } catch (e) {
     STATE.attError = e.message;
   }
@@ -91,6 +94,9 @@ function renderValidation() {
       });
     }
   }
+  if (!STATE.summaryValues) {
+    rules.push({ sev: 'info', title: 'No "Summary" sheet found in the Attendance Report — the flat file export will not include a Summary tab.' });
+  }
 
   const nErr = rules.filter((r) => r.sev === 'error').length;
   const nWarn = rules.filter((r) => r.sev === 'warn').length;
@@ -142,7 +148,7 @@ async function exportFlat() {
   const btn = $('btnExportFlat'); const label = btn.textContent;
   try {
     btn.disabled = true; btn.textContent = 'Exporting…';
-    const wb = buildFlatFile(ExcelJS, currentPlan());
+    const wb = buildFlatFile(ExcelJS, currentPlan(), STATE.summaryValues);
     await downloadWorkbook(wb, 'Attendance_Flat.xlsx');
   } catch (e) {
     alert('Export failed: ' + e.message);

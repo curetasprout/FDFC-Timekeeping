@@ -30,6 +30,10 @@ const EMPLIST = 'C:\\Users\\CUreta\\Downloads\\Employee list report - 2026-08-03
   console.log(`Parsed Detailed: ${detailed.headers.length} headers, ${detailed.rows.length} day-rows`);
   console.log('Headers:', detailed.headers.join(' | '));
 
+  const summaryWs = attWb.getWorksheet('Summary');
+  const summaryValues = summaryWs ? summaryWs.getSheetValues() : null;
+  console.log(`Summary sheet present: ${!!summaryWs}${summaryWs ? `, ${summaryValues.length - 1} rows` : ''}`);
+
   const empWb = new ExcelJS.Workbook();
   await empWb.xlsx.load(readFileSync(EMPLIST));
   const empWs = empWb.worksheets[0];
@@ -52,10 +56,11 @@ const EMPLIST = 'C:\\Users\\CUreta\\Downloads\\Employee list report - 2026-08-03
   console.log('\n--- Sample flatRows (first 3) ---');
   plan.flatRows.slice(0, 3).forEach((r) => console.log({ name: r.name, idNumber: r.idNumber, cells: r.cells }));
 
-  const flatWb = buildFlatFile(ExcelJS, plan);
+  const flatWb = buildFlatFile(ExcelJS, plan, summaryValues);
   const flatOut = join(here, 'out_flat.xlsx');
   writeFileSync(flatOut, Buffer.from(await flatWb.xlsx.writeBuffer()));
   console.log(`\nWrote ${flatOut}`);
+  console.log('Flat file sheets:', flatWb.worksheets.map((w) => w.name));
 
   const bioWb = buildBiologsTemplate(ExcelJS, plan);
   const bioOut = join(here, 'out_biologs.xlsx');

@@ -2,10 +2,27 @@
 
 // Deliverable 1: the Detailed sheet flattened, with Name/ID Number prepended to
 // every row (a clean rebuild — values only, no attempt to mirror the source's
-// per-block layout/styling since the whole point is to de-nest it).
-export function buildFlatFile(ExcelJS, plan) {
+// per-block layout/styling since the whole point is to de-nest it). The source
+// Summary sheet, if provided, is carried over as-is (raw values) so the flat
+// file stays self-contained/reconcilable with the original report.
+export function buildFlatFile(ExcelJS, plan, summaryValues) {
   const wb = new ExcelJS.Workbook();
   wb.creator = 'HRIS Biologs Generator';
+
+  if (summaryValues) {
+    const sOut = wb.addWorksheet('Summary');
+    for (let r = 1; r < summaryValues.length; r++) {
+      const row = summaryValues[r];
+      if (!row) continue;
+      for (let c = 1; c < row.length; c++) {
+        const v = row[c];
+        if (v !== undefined && v !== null) sOut.getRow(r).getCell(c).value = v;
+      }
+    }
+    sOut.getRow(1).eachCell((cell) => { cell.font = { name: 'Calibri', size: 11, bold: true }; });
+    sOut.views = [{ state: 'frozen', ySplit: 1 }];
+  }
+
   const ws = wb.addWorksheet('Detailed (Flat)');
 
   const headers = ['Name', 'ID Number', ...plan.flatHeaders];
