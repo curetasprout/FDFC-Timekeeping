@@ -11,7 +11,18 @@ Report export into two deliverables:
    one `IN` row and one `OUT` row per scheduled working day.
 
 Runs entirely client-side via [ExcelJS](https://github.com/exceljs/exceljs) —
-uploaded data never leaves the browser.
+your data never leaves the browser. The only thing sent anywhere is a small
+usage ping (see "Usage tracking" below).
+
+## Usage tracking
+
+On the deployed site only (never `file://` or `localhost`), the first export
+asks for a work email once per browser (stored in localStorage). Each export then
+sends `{token, app, email, event}` — `export_flat` or `export_biologs` — to a
+write-only Google Apps Script that appends a row to a private Google Sheet.
+No attendance data, employee data or file contents are ever sent. Config lives at
+the top of `src/app/usage.js`; tracking stays off until `USAGE_TOKEN` is set.
+The token is embedded in the page, so it only filters junk pings and isn't a secret.
 
 ## Design decisions (confirmed with the client)
 

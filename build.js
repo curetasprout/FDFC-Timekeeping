@@ -19,7 +19,9 @@ const vendor = read('vendor', 'exceljs.min.js');
 const core = ['parse', 'shift', 'dateutil', 'mapping', 'validate', 'generate', 'exportXlsx']
   .map((m) => `// ---- core/${m}.js ----\n` + deModule(read('src', 'core', `${m}.js`)))
   .join('\n\n');
-const app = deModule(read('src', 'app', 'app.js'));
+const app = ['usage', 'app']
+  .map((m) => `// ---- app/${m}.js ----\n` + deModule(read('src', 'app', `${m}.js`)))
+  .join('\n\n');
 
 const html = read('src', 'app', 'index.template.html')
   .replace('/*__VENDOR__*/', () => vendor)

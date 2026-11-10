@@ -178,11 +178,13 @@ async function downloadWorkbook(wb, filename) {
 }
 
 async function exportFlat() {
+  if (!(await ensureUsageEmail())) return; // user cancelled the one-time email prompt
   const btn = $('btnExportFlat'); const label = btn.textContent;
   try {
     btn.disabled = true; btn.textContent = 'Exporting…';
     const wb = buildFlatFile(ExcelJS, currentPlan(), STATE.summaryValues);
     await downloadWorkbook(wb, 'Attendance_Flat.xlsx');
+    sendUsage('export_flat');
   } catch (e) {
     alert('Export failed: ' + e.message);
   } finally {
@@ -192,11 +194,13 @@ async function exportFlat() {
 }
 
 async function exportBiologs() {
+  if (!(await ensureUsageEmail())) return; // user cancelled the one-time email prompt
   const btn = $('btnExportBiologs'); const label = btn.textContent;
   try {
     btn.disabled = true; btn.textContent = 'Exporting…';
     const wb = buildBiologsTemplate(ExcelJS, currentPlan());
     await downloadWorkbook(wb, 'HRIS_Biologs.xlsx');
+    sendUsage('export_biologs');
   } catch (e) {
     alert('Export failed: ' + e.message);
   } finally {
