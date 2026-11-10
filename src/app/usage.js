@@ -9,7 +9,7 @@
 //   - tracking (and the email prompt) stays off until USAGE_TOKEN is filled in
 
 const USAGE_URL = 'https://script.google.com/macros/s/AKfycbxOgOePw_WaMZOthS9eWNQoaCb0uG4egT1yU5yHcEbjMthTLOx1k1jqER2bEQaL26oFpw/exec';
-const USAGE_TOKEN = 'PASTE_SECRET_TOKEN';
+const USAGE_TOKEN = 'ghtGqe9qV_JetDg-YxC2Nr02';
 const USAGE_APP = 'hris-biologs';
 const USAGE_EMAIL_KEY = 'hris-biologs-usage-email';
 
